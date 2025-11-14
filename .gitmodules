@@ -1,0 +1,3 @@
+[submodule "docs/learning-notes"]
+	path = docs/learning-notes
+	url = git@github.com:honlnk/JManus-learn-notes.git
