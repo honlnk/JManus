@@ -71,58 +71,166 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.micrometer.common.util.StringUtils;
 import reactor.core.publisher.Flux;
 
+/**
+ * 【动态智能体具体实现类】Concrete implementation of a dynamic intelligent agent.
+ * 【动态智能体的具体实现类】
+ *
+ * This class extends ReActAgent to provide a complete implementation of the Think-Act pattern
+ * with dynamic tool configuration, streaming response handling, and retry mechanisms.
+ * 【此类继承自ReActAgent，提供完整的Think-Act模式实现，包含动态工具配置、流式响应处理和重试机制】
+ *
+ * Key features:
+ * 【主要特性：】
+ * - Dynamic tool configuration and management 【动态工具配置和管理】
+ * - Streaming response handling for better user experience 【流式响应处理以提供更好的用户体验】
+ * - Retry mechanism with exponential backoff 【带指数退避的重试机制】
+ * - Parallel tool execution support 【并行工具执行支持】
+ * - User input handling with timeout management 【带超时管理的用户输入处理】
+ * - Memory management and conversation history 【内存管理和对话历史】
+ */
 public class DynamicAgent extends ReActAgent {
 
+	/**
+	 * 【当前步骤环境数据键名】Key for current step environment data in message metadata
+	 * 【消息元数据中当前步骤环境数据的键名】
+	 */
 	private static final String CURRENT_STEP_ENV_DATA_KEY = "current_step_env_data";
 
+	/**
+	 * 【日志记录器】Logger for this class
+	 * 【此类的日志记录器】
+	 */
 	private static final Logger log = LoggerFactory.getLogger(DynamicAgent.class);
 
+	/**
+	 * 【JSON对象映射器】ObjectMapper for JSON serialization/deserialization
+	 * 【JSON序列化/反序列化的对象映射器】
+	 */
 	private final ObjectMapper objectMapper;
 
+	/**
+	 * 【智能体名称】Name of this agent
+	 * 【此智能体的名称】
+	 */
 	private final String agentName;
 
+	/**
+	 * 【智能体描述】Description of this agent
+	 * 【此智能体的描述】
+	 */
 	private final String agentDescription;
 
+	/**
+	 * 【下一步提示模板】Prompt template for next step guidance
+	 * 【下一步指导的提示模板】
+	 */
 	private final String nextStepPrompt;
 
+	/**
+	 * 【工具回调提供者】Provider for tool callbacks
+	 * 【工具回调的提供者】
+	 */
 	protected ToolCallbackProvider toolCallbackProvider;
 
+	/**
+	 * 【可用工具键列表】List of available tool keys
+	 * 【可用工具键的列表】
+	 */
 	protected final List<String> availableToolKeys;
 
+	/**
+	 * 【聊天响应】Chat response from LLM
+	 * 【来自LLM的聊天响应】
+	 */
 	private ChatResponse response;
 
+	/**
+	 * 【流式响应结果】Result of streaming response processing
+	 * 【流式响应处理的结果】
+	 */
 	private StreamingResponseHandler.StreamingResult streamResult;
 
+	/**
+	 * 【用户提示】User prompt for LLM interaction
+	 * 【与LLM交互的用户提示】
+	 */
 	private Prompt userPrompt;
 
+	/**
+	 * 【行动工具信息列表】List of action tool information
+	 * 【行动工具信息的列表】
+	 */
 	private List<ActToolParam> actToolInfoList = new ArrayList<>();
 
+	/**
+	 * 【工具调用管理器】Manager for tool calling operations
+	 * 【工具调用操作的管理器】
+	 */
 	private final ToolCallingManager toolCallingManager;
 
+	/**
+	 * 【用户输入服务】Service for handling user input
+	 * 【处理用户输入的服务】
+	 */
 	private final UserInputService userInputService;
 
+	/**
+	 * 【模型名称】Name of the LLM model to use
+	 * 【要使用的LLM模型名称】
+	 */
 	private final String modelName;
 
+	/**
+	 * 【流式响应处理器】Handler for streaming responses
+	 * 【流式响应的处理器】
+	 */
 	private final StreamingResponseHandler streamingResponseHandler;
 
+	/**
+	 * 【JManus事件发布器】Publisher for JManus events
+	 * 【JManus事件的发布器】
+	 */
 	private JmanusEventPublisher jmanusEventPublisher;
 
+	/**
+	 * 【智能体中断助手】Helper for agent interruption handling
+	 * 【智能体中断处理的助手】
+	 */
 	private AgentInterruptionHelper agentInterruptionHelper;
 
+	/**
+	 * 【并行工具执行服务】Service for parallel tool execution
+	 * 【并行工具执行的服务】
+	 */
 	private ParallelToolExecutionService parallelToolExecutionService;
 
 	/**
-	 * List to record all exceptions from LLM calls during retry attempts
+	 * 【LLM调用异常列表】List to record all exceptions from LLM calls during retry attempts
+	 * 【记录重试期间LLM调用所有异常的列表】
 	 */
 	private final List<Exception> llmCallExceptions = new ArrayList<>();
 
 	/**
-	 * Latest exception from LLM calls, used when max retries are reached
+	 * 【最新LLM异常】Latest exception from LLM calls, used when max retries are reached
+	 * 【LLM调用的最新异常，在达到最大重试次数时使用】
 	 */
 	private Exception latestLlmException = null;
 
+	/**
+	 * 【清理资源】Clean up resources associated with this agent and its tools.
+	 * 【清理与此智能体及其工具相关的资源】
+	 *
+	 * This method is called when the agent is no longer needed to properly clean up
+	 * resources and prevent memory leaks.
+	 * 【当智能体不再需要时调用此方法，以正确清理资源并防止内存泄漏】
+	 *
+	 * @param planId 计划ID，用于标识需要清理的资源 Plan ID for identifying resources to clean up
+	 */
 	public void clearUp(String planId) {
+		// 获取所有工具回调上下文 Get all tool callback contexts
 		Map<String, ToolCallBackContext> toolCallBackContext = toolCallbackProvider.getToolCallBackContext();
+
+		// 遍历并清理每个工具 Iterate through and clean up each tool
 		for (ToolCallBackContext toolCallBack : toolCallBackContext.values()) {
 			try {
 				toolCallBack.getFunctionInstance().cleanup(planId);
@@ -131,7 +239,8 @@ public class DynamicAgent extends ReActAgent {
 				log.error("Error cleaning up tool callback context: {}", e.getMessage(), e);
 			}
 		}
-		// Also remove any pending form input tool for this root plan ID
+
+		// 同时移除此根计划ID的任何待处理表单输入工具 Also remove any pending form input tool for this root plan ID
 		if (userInputService != null) {
 			String rootPlanId = getRootPlanId();
 			if (rootPlanId != null) {
@@ -140,6 +249,29 @@ public class DynamicAgent extends ReActAgent {
 		}
 	}
 
+	/**
+	 * 【构造函数】Constructor for DynamicAgent with all required dependencies.
+	 * 【DynamicAgent的构造函数，包含所有必需的依赖项】
+	 *
+	 * @param llmService LLM服务，用于与语言模型交互 LLM service for interacting with language models
+	 * @param planExecutionRecorder 计划执行记录器，用于记录执行过程 Plan execution recorder for recording execution process
+	 * @param manusProperties Manus配置属性 Manus configuration properties
+	 * @param name 智能体名称 Agent name
+	 * @param description 智能体描述 Agent description
+	 * @param nextStepPrompt 下一步指导提示 Prompt for next step guidance
+	 * @param availableToolKeys 可用工具键列表 List of available tool keys
+	 * @param toolCallingManager 工具调用管理器 Tool calling manager
+	 * @param initialAgentSetting 初始智能体设置 Initial agent settings
+	 * @param userInputService 用户输入服务 User input service
+	 * @param modelName LLM模型名称 LLM model name
+	 * @param streamingResponseHandler 流式响应处理器 Streaming response handler
+	 * @param step 执行步骤 Execution step
+	 * @param planIdDispatcher 计划ID分发器 Plan ID dispatcher
+	 * @param jmanusEventPublisher JManus事件发布器 JManus event publisher
+	 * @param agentInterruptionHelper 智能体中断助手 Agent interruption helper
+	 * @param objectMapper JSON对象映射器 JSON object mapper
+	 * @param parallelToolExecutionService 并行工具执行服务 Parallel tool execution service
+	 */
 	public DynamicAgent(LlmService llmService, PlanExecutionRecorder planExecutionRecorder,
 			ManusProperties manusProperties, String name, String description, String nextStepPrompt,
 			List<String> availableToolKeys, ToolCallingManager toolCallingManager,
@@ -147,18 +279,27 @@ public class DynamicAgent extends ReActAgent {
 			StreamingResponseHandler streamingResponseHandler, ExecutionStep step, PlanIdDispatcher planIdDispatcher,
 			JmanusEventPublisher jmanusEventPublisher, AgentInterruptionHelper agentInterruptionHelper,
 			ObjectMapper objectMapper, ParallelToolExecutionService parallelToolExecutionService) {
+		// 调用父类构造函数 Call parent constructor
 		super(llmService, planExecutionRecorder, manusProperties, initialAgentSetting, step, planIdDispatcher);
+
+		// 初始化基本属性 Initialize basic properties
 		this.objectMapper = objectMapper;
-		super.objectMapper = objectMapper; // Set parent's objectMapper as well
+		super.objectMapper = objectMapper; // 同时设置父类的objectMapper Set parent's objectMapper as well
+
+		// 设置智能体标识信息 Set agent identification information
 		this.agentName = name;
 		this.agentDescription = description;
 		this.nextStepPrompt = nextStepPrompt;
+
+		// 初始化可用工具列表 Initialize available tool list
 		if (availableToolKeys == null) {
 			this.availableToolKeys = new ArrayList<>();
 		}
 		else {
 			this.availableToolKeys = availableToolKeys;
 		}
+
+		// 初始化服务组件 Initialize service components
 		this.toolCallingManager = toolCallingManager;
 		this.userInputService = userInputService;
 		this.modelName = modelName;
@@ -168,49 +309,85 @@ public class DynamicAgent extends ReActAgent {
 		this.parallelToolExecutionService = parallelToolExecutionService;
 	}
 
+	/**
+	 * 【执行思考过程】Execute the thinking process of the ReAct pattern.
+	 * 【执行ReAct模式的思考过程】
+	 *
+	 * This method implements the "Think" part of the Think-Act pattern. It analyzes the current
+	 * state, collects environment data, and decides what tools to use next.
+	 * 【此方法实现了Think-Act模式的"思考"部分。它分析当前状态、收集环境数据并决定接下来使用哪些工具】
+	 *
+	 * Key steps:
+	 * 【关键步骤：】
+	 * 1. Check for interruption 【检查中断】
+	 * 2. Collect environment data for tools 【为工具收集环境数据】
+	 * 3. Execute LLM call with retry mechanism 【使用重试机制执行LLM调用】
+	 * 4. Process response and determine tool selection 【处理响应并确定工具选择】
+	 *
+	 * @return true if tools should be executed (action needed), false if no action needed
+	 *         【如果应该执行工具（需要行动）返回true，如果不需要行动返回false】
+	 */
 	@Override
 	protected boolean think() {
-		// Check for interruption before starting thinking process
+		// 在开始思考过程前检查中断 Check for interruption before starting thinking process
 		if (agentInterruptionHelper != null && !agentInterruptionHelper.checkInterruptionAndContinue(getRootPlanId())) {
 			log.info("Agent {} thinking process interrupted for rootPlanId: {}", getName(), getRootPlanId());
-			// Throw exception to signal interruption instead of returning false
+			// 抛出异常以表示中断，而不是返回false Throw exception to signal interruption instead of returning false
 			throw new TaskInterruptionCheckerService.TaskInterruptedException(
 					"Agent thinking interrupted for rootPlanId: " + getRootPlanId());
 		}
 
+		// 为工具收集并设置环境数据 Collect and set environment data for tools
 		collectAndSetEnvDataForTools();
 
 		try {
+			// 使用重试机制执行（最多3次） Execute with retry mechanism (maximum 3 times)
 			boolean result = executeWithRetry(3);
-			// If retries exhausted and we have exceptions, the result will be false
-			// and latestLlmException will be set
+			// 如果重试用尽且有异常，结果将为false，latestLlmException将被设置
+			// If retries exhausted and we have exceptions, the result will be false and latestLlmException will be set
 			return result;
 		}
 		catch (TaskInterruptionCheckerService.TaskInterruptedException e) {
 			log.info("Agent {} thinking process interrupted: {}", getName(), e.getMessage());
-			throw e; // Re-throw the interruption exception
+			throw e; // 重新抛出中断异常 Re-throw the interruption exception
 		}
 		catch (Exception e) {
+			// 记录思考过程中的异常 Record exception during thinking process
 			log.error(String.format("🚨 Oops! The %s's thinking process hit a snag: %s", getName(), e.getMessage()), e);
 			log.info("Exception occurred", e);
-			// Record this exception as well
+			// 同时记录此异常 Also record this exception
 			latestLlmException = e;
 			llmCallExceptions.add(e);
-			return false;
+			return false; // 返回false表示不需要行动 Return false to indicate no action needed
 		}
 	}
 
+	/**
+	 * 【带重试机制的执行】Execute thinking process with retry mechanism.
+	 * 【使用重试机制执行思考过程】
+	 *
+	 * This method implements a robust retry mechanism with exponential backoff for handling
+	 * transient failures during LLM calls.
+	 * 【此方法实现了健壮的重试机制，使用指数退避处理LLM调用期间的瞬时故障】
+	 *
+	 * @param maxRetries 最大重试次数 Maximum number of retry attempts
+	 * @return true if successful and tools should be executed, false if all retries failed
+	 *         【如果成功且应该执行工具返回true，如果所有重试都失败返回false】
+	 * @throws Exception if non-retryable error occurs or interruption happens
+	 *         【如果发生不可重试的错误或中断则抛出异常】
+	 */
 	private boolean executeWithRetry(int maxRetries) throws Exception {
 		int attempt = 0;
 		Exception lastException = null;
-		// Clear exception list at the start of retry cycle
+
+		// 在重试周期开始时清除异常列表 Clear exception list at the start of retry cycle
 		llmCallExceptions.clear();
 		latestLlmException = null;
 
 		while (attempt < maxRetries) {
 			attempt++;
 
-			// Check for interruption before each retry attempt
+			// 在每次重试尝试前检查中断 Check for interruption before each retry attempt
 			if (agentInterruptionHelper != null
 					&& !agentInterruptionHelper.checkInterruptionAndContinue(getRootPlanId())) {
 				log.info("Agent {} retry process interrupted at attempt {}/{} for rootPlanId: {}", getName(), attempt,
@@ -222,34 +399,44 @@ public class DynamicAgent extends ReActAgent {
 			try {
 				log.info("Attempt {}/{}: Executing agent thinking process", attempt, maxRetries);
 
+				// 准备系统消息 Prepare system message
 				Message systemMessage = getThinkMessage();
-				// Use current env as user message
+
+				// 使用当前环境作为用户消息 Use current env as user message
 				Message currentStepEnvMessage = currentStepEnvMessage();
-				// Record think message
+
+				// 记录思考消息 Record think message
 				List<Message> thinkMessages = Arrays.asList(systemMessage, currentStepEnvMessage);
 				String thinkInput = thinkMessages.toString();
 
-				// log.debug("Messages prepared for the prompt: {}", thinkMessages);
-				// Build current prompt. System message is the first message
+				// 构建当前提示。系统消息是第一条消息 Build current prompt. System message is the first message
 				List<Message> messages = new ArrayList<>(Collections.singletonList(systemMessage));
-				// Add history message.
+
+				// 添加历史消息 Add history message
 				ChatMemory chatMemory = llmService.getAgentMemory(manusProperties.getMaxMemory());
 				List<Message> historyMem = chatMemory.get(getCurrentPlanId());
 				messages.addAll(historyMem);
 				messages.add(currentStepEnvMessage);
+
+				// 生成工具调用ID Generate tool call ID
 				String toolcallId = planIdDispatcher.generateToolCallId();
-				// Call the LLM
+
+				// 调用LLM Call the LLM
 				Map<String, Object> toolContextMap = new HashMap<>();
 				toolContextMap.put("toolcallId", toolcallId);
 				toolContextMap.put("planDepth", getPlanDepth());
 				ToolCallingChatOptions chatOptions = ToolCallingChatOptions.builder()
 					.internalToolExecutionEnabled(false)
 					.toolContext(toolContextMap)
-					// can't support by toocall options :
+					// 工具调用选项目前不支持：
+					// can't support by toolcall options :
 					// .parallelToolCalls(manusProperties.getParallelToolCalls())
 					.build();
+
 				userPrompt = new Prompt(messages, chatOptions);
 				List<ToolCallback> callbacks = getToolCallList();
+
+				// 获取聊天客户端 Get chat client
 				ChatClient chatClient;
 				if (modelName == null || modelName.isEmpty()) {
 					chatClient = llmService.getDefaultDynamicAgentChatClient();
@@ -257,20 +444,24 @@ public class DynamicAgent extends ReActAgent {
 				else {
 					chatClient = llmService.getDynamicAgentChatClient(modelName);
 				}
-				// Use streaming response handler for better user experience and content
-				// merging
+
+				// 使用流式响应处理器以获得更好的用户体验和内容合并
+				// Use streaming response handler for better user experience and content merging
 				Flux<ChatResponse> responseFlux = chatClient.prompt(userPrompt)
 					.toolCallbacks(callbacks)
 					.stream()
 					.chatResponse();
+
 				boolean isDebugModel = manusProperties.getDebugDetail() != null && manusProperties.getDebugDetail();
+
+				// 启用智能体思考的早期终止（应该有工具调用）
 				// Enable early termination for agent thinking (should have tool calls)
 				streamResult = streamingResponseHandler.processStreamingResponse(responseFlux,
 						"Agent " + getName() + " thinking", getCurrentPlanId(), isDebugModel, true);
 
 				response = streamResult.getLastResponse();
 
-				// Use merged content from streaming handler
+				// 使用来自流处理器的合并内容 Use merged content from streaming handler
 				List<ToolCall> toolCalls = streamResult.getEffectiveToolCalls();
 				String responseByLLm = streamResult.getEffectiveText();
 
@@ -281,6 +472,7 @@ public class DynamicAgent extends ReActAgent {
 					log.info(String.format("🧰 Tools being prepared: %s",
 							toolCalls.stream().map(ToolCall::name).collect(Collectors.toList())));
 
+					// 记录思考-行动过程 Record think-act process
 					String stepId = super.step.getStepId();
 					String thinkActId = planIdDispatcher.generateThinkActId();
 
@@ -294,27 +486,29 @@ public class DynamicAgent extends ReActAgent {
 							responseByLLm, null, actToolInfoList);
 					planExecutionRecorder.recordThinkingAndAction(step, paramsN);
 
-					// Clear exception cache if this was a retry attempt
+					// 如果这是重试尝试，清除异常缓存 Clear exception cache if this was a retry attempt
 					if (attempt > 1 && jmanusEventPublisher != null) {
 						log.info("Retry successful for planId: {}, clearing exception cache", getCurrentPlanId());
 						jmanusEventPublisher.publish(new PlanExceptionClearedEvent(getCurrentPlanId()));
 					}
 
-					return true;
+					return true; // 成功，应该执行工具 Successful, should execute tools
 				}
+
 				log.warn("Attempt {}: No tools selected. Retrying...", attempt);
 
 			}
 			catch (Exception e) {
 				lastException = e;
 				latestLlmException = e;
-				// Record exception to the list (record all exceptions, even non-retryable
-				// ones)
+
+				// 将异常记录到列表中（记录所有异常，包括不可重试的）
+				// Record exception to the list (record all exceptions, even non-retryable ones)
 				llmCallExceptions.add(e);
 				log.warn("Attempt {} failed: {}", attempt, e.getMessage());
 				log.debug("Exception details for attempt {}: {}", attempt, e.getMessage(), e);
 
-				// Check if this is a network-related error that should be retried
+				// 检查是否是应该重试的网络相关错误 Check if this is a network-related error that should be retried
 				if (isRetryableException(e)) {
 					if (attempt < maxRetries) {
 						long waitTime = calculateBackoffDelay(attempt);
@@ -326,11 +520,11 @@ public class DynamicAgent extends ReActAgent {
 							Thread.currentThread().interrupt();
 							throw new Exception("Retry interrupted", ie);
 						}
-						continue;
+						continue; // 继续下一次重试 Continue to next retry
 					}
 				}
 				else {
-					// Non-retryable error - still record it, but throw immediately
+					// 不可重试的错误 - 仍然记录，但立即抛出 Non-retryable error - still record it, but throw immediately
 					log.error("Non-retryable error encountered at attempt {}/{}: {}", attempt, maxRetries,
 							e.getMessage());
 					throw e;
@@ -338,80 +532,113 @@ public class DynamicAgent extends ReActAgent {
 			}
 		}
 
-		// All retries exhausted
+		// 所有重试都用尽了 All retries exhausted
 		if (lastException != null) {
 			log.error("All {} retry attempts failed. Total exceptions recorded: {}. Latest exception: {}", maxRetries,
 					llmCallExceptions.size(), latestLlmException != null ? latestLlmException.getMessage() : "N/A");
-			// Store the latest exception for use in step() method
+			// 存储最新的异常供step()方法使用 Store the latest exception for use in step() method
+			// 不要在这里抛出异常，让think()返回false，由step()处理
 			// Don't throw exception here, let think() return false and step() handle it
 			return false;
 		}
+
 		return false;
 	}
 
 	/**
-	 * Check if the exception is retryable (network issues, timeouts, etc.)
+	 * 【检查异常是否可重试】Check if the exception is retryable (network issues, timeouts, etc.).
+	 * 【检查异常是否可重试（网络问题、超时等）】
+	 *
+	 * @param e 要检查的异常 The exception to check
+	 * @return true if the exception is retryable, false otherwise
+	 *         【如果异常可重试返回true，否则返回false】
 	 */
 	private boolean isRetryableException(Exception e) {
 		String message = e.getMessage();
 		if (message == null)
 			return false;
 
-		// Check for network-related errors
+		// 检查网络相关错误 Check for network-related errors
 		return message.contains("Failed to resolve") || message.contains("timeout") || message.contains("connection")
 				|| message.contains("DNS") || message.contains("WebClientRequestException")
 				|| message.contains("DnsNameResolverTimeoutException");
 	}
 
 	/**
-	 * Calculate exponential backoff delay
+	 * 【计算指数退避延迟】Calculate exponential backoff delay.
+	 * 【计算指数退避延迟时间】
+	 *
+	 * @param attempt 当前尝试次数 Current attempt number (1-based)
+	 * @return 延迟时间（毫秒）Delay time in milliseconds
 	 */
 	private long calculateBackoffDelay(int attempt) {
+		// 指数退避：2^attempt * 2000ms，最大60秒
 		// Exponential backoff: 2^attempt * 2000ms, max 60 seconds
 		long delay = Math.min(2000L * (1L << (attempt - 1)), 60000L);
 		return delay;
 	}
 
+	/**
+	 * 【执行完整步骤】Execute a complete think-act step.
+	 * 【执行完整的思考-行动步骤】
+	 *
+	 * This method implements the main execution logic of the ReAct pattern by combining
+	 * the think() and act() methods. It handles various error conditions and provides
+	 * appropriate responses.
+	 * 【此方法通过结合think()和act()方法实现了ReAct模式的主要执行逻辑。它处理各种错误条件并提供适当的响应】
+	 *
+	 * @return 包含执行结果和状态的AgentExecResult AgentExecResult containing execution result and state
+	 */
 	@Override
 	public AgentExecResult step() {
 		try {
+			// 执行思考过程 Execute thinking process
 			boolean shouldAct = think();
+
 			if (!shouldAct) {
-				// Check if we have a latest exception from LLM calls (max retries
-				// reached)
+				// 检查是否有来自LLM调用的最新异常（已达到最大重试次数）
+				// Check if we have a latest exception from LLM calls (max retries reached)
 				if (latestLlmException != null) {
 					log.error(
 							"Agent {} thinking failed after all retries. Simulating full flow with SystemErrorReportTool",
 							getName());
 					return handleLlmTimeoutWithSystemErrorReport();
 				}
-				// Normal case: thinking complete, no action needed
+
+				// 正常情况：思考完成，无需行动 Normal case: thinking complete, no action needed
 				return new AgentExecResult("Thinking complete - no action needed", AgentState.IN_PROGRESS);
 			}
+
+			// 执行行动 Execute action
 			return act();
 		}
 		catch (TaskInterruptionCheckerService.TaskInterruptedException e) {
+			// 智能体被中断，返回INTERRUPTED状态以停止执行
 			// Agent was interrupted, return INTERRUPTED state to stop execution
 			return new AgentExecResult("Agent execution interrupted: " + e.getMessage(), AgentState.INTERRUPTED);
 		}
 		catch (Exception e) {
 			log.error("Unexpected exception in step()", e);
+			// 使用系统错误报告工具处理异常 Handle exception with SystemErrorReportTool
 			return handleExceptionWithSystemErrorReport(e, new ArrayList<>());
 		}
 	}
 
 	/**
-	 * Get the list of all exceptions recorded during LLM calls
-	 * @return List of exceptions (may be empty if no exceptions occurred)
+	 * 【获取LLM调用异常列表】Get the list of all exceptions recorded during LLM calls.
+	 * 【获取LLM调用期间记录的所有异常的列表】
+	 *
+	 * @return 异常列表的副本（如果没有发生异常可能为空） List of exceptions (may be empty if no exceptions occurred)
 	 */
 	public List<Exception> getLlmCallExceptions() {
-		return new ArrayList<>(llmCallExceptions); // Return a copy to prevent external
-													// modification
+		return new ArrayList<>(llmCallExceptions); // 返回副本以防止外部修改 Return a copy to prevent external modification
 	}
 
 	/**
-	 * Get the latest exception from LLM calls
-	 * @return Latest exception, or null if no exceptions occurred
+	 * 【获取最新LLM异常】Get the latest exception from LLM calls.
+	 * 【获取LLM调用的最新异常】
+	 *
+	 * @return 最新异常，如果没有发生异常则返回null Latest exception, or null if no exceptions occurred
 	 */
 	public Exception getLatestLlmException() {
 		return latestLlmException;
@@ -451,31 +678,43 @@ public class DynamicAgent extends ReActAgent {
 		return errorMessage.toString();
 	}
 
+	/**
+	 * 【执行具体行动】Execute specific actions based on thinking results.
+	 * 【基于思考结果执行具体行动】
+	 *
+	 * This method implements the "Act" part of the Think-Act pattern. It executes the tools
+	 * selected during the thinking phase and handles both single and multiple tool scenarios.
+	 * 【此方法实现了Think-Act模式的"行动"部分。它执行在思考阶段选择的工具，并处理单工具和多工具场景】
+	 *
+	 * @return 包含执行结果和状态的AgentExecResult AgentExecResult containing execution result and state
+	 */
 	@Override
 	protected AgentExecResult act() {
-		// Check for interruption before starting action process
+		// 在开始行动过程前检查中断 Check for interruption before starting action process
 		if (agentInterruptionHelper != null && !agentInterruptionHelper.checkInterruptionAndContinue(getRootPlanId())) {
 			log.info("Agent {} action process interrupted for rootPlanId: {}", getName(), getRootPlanId());
 			return new AgentExecResult("Action interrupted by user", AgentState.INTERRUPTED);
 		}
 
 		try {
+			// 获取有效工具调用 Get effective tool calls
 			List<ToolCall> toolCalls = streamResult.getEffectiveToolCalls();
 
-			// Route to appropriate handler based on tool count
+			// 根据工具数量路由到适当的处理器 Route to appropriate handler based on tool count
 			if (toolCalls == null || toolCalls.isEmpty()) {
 				return new AgentExecResult("tool call is empty , please retry", AgentState.IN_PROGRESS);
 			}
 			else if (toolCalls.size() == 1) {
-				// Single tool execution - core logic
+				// 单工具执行 - 核心逻辑 Single tool execution - core logic
 				return processSingleTool(toolCalls.get(0));
 			}
 			else {
-				// Multiple tools execution
+				// 多工具执行 Multiple tools execution
 				return processMultipleTools(toolCalls);
 			}
 		}
 		catch (Exception e) {
+			// 处理工具执行错误 Handle tool execution errors
 			log.error("Error executing tools: {}", e.getMessage(), e);
 
 			StringBuilder errorMessage = new StringBuilder("Error executing tools: ");
@@ -486,11 +725,12 @@ public class DynamicAgent extends ReActAgent {
 							? actToolInfoList.get(0).getParameters().toString() : "unknown";
 			errorMessage.append("  . llm return param :  ").append(firstToolcall);
 
-			// Clean up form input tool using root plan ID on error
+			// 出错时使用根计划ID清理表单输入工具 Clean up form input tool using root plan ID on error
 			String rootPlanId = getRootPlanId();
 			if (rootPlanId != null) {
 				userInputService.removeFormInputTool(rootPlanId);
 			}
+
 			return new AgentExecResult(e.getMessage(), AgentState.COMPLETED);
 		}
 	}
@@ -1035,11 +1275,23 @@ public class DynamicAgent extends ReActAgent {
 		}
 	}
 
+	/**
+	 * 【获取智能体名称】Get the name of this agent.
+	 * 【获取此智能体的名称】
+	 *
+	 * @return 智能体名称 The name of this agent
+	 */
 	@Override
 	public String getName() {
 		return this.agentName;
 	}
 
+	/**
+	 * 【获取智能体描述】Get the description of this agent.
+	 * 【获取此智能体的描述】
+	 *
+	 * @return 智能体描述 The description of this agent
+	 */
 	@Override
 	public String getDescription() {
 		return this.agentDescription;
@@ -1147,20 +1399,32 @@ public class DynamicAgent extends ReActAgent {
 		return "";
 	}
 
+	/**
+	 * 【收集并设置工具环境数据】Collect and set environment data for all available tools.
+	 * 【为所有可用工具收集并设置环境数据】
+	 *
+	 * This method gathers the current state information from all tools and stores it
+	 * in the environment data map for use in the next thinking cycle.
+	 * 【此方法从所有工具收集当前状态信息，并将其存储在环境数据映射中供下一个思考周期使用】
+	 */
 	public void collectAndSetEnvDataForTools() {
 
+		// 创建工具环境数据映射 Create tool environment data map
 		Map<String, Object> toolEnvDataMap = new HashMap<>();
 
+		// 获取旧的环境数据并合并 Get old environment data and merge
 		Map<String, Object> oldMap = getEnvData();
 		toolEnvDataMap.putAll(oldMap);
 
-		// Overwrite old data with new data
+		// 用新数据覆盖旧数据 Overwrite old data with new data
 		for (String toolKey : availableToolKeys) {
 			String envData = collectEnvData(toolKey);
 			toolEnvDataMap.put(toolKey, envData);
 		}
+
 		// log.debug("Collected tool environment data: {}", toolEnvDataMap);
 
+		// 设置环境数据 Set environment data
 		setEnvData(toolEnvDataMap);
 	}
 
