@@ -222,7 +222,6 @@ public class ChromeDriverService implements IChromeDriverService {
 		}
 	}
 
-
 	/**
 	 * Create new driver with retry mechanism
 	 */

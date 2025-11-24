@@ -40,17 +40,16 @@ import com.alibaba.cloud.ai.manus.tool.TerminateTool;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 /**
- * ConfigurableDynaAgent - A flexible agent that allows passing tool lists dynamically
- * This agent can be configured with different tool sets at runtime and extends
- * DynamicAgent to inherit all the core functionality while adding configurable tool
- * management.
+ * ConfigurableDynaAgent - 一种支持动态传递工具列表的灵活代理。
+ * 该代理可在运行时配置不同工具集，
+ * 继承DynamicAgent全部核心功能的同时，新增了可配置工具管理能力
  */
 public class ConfigurableDynaAgent extends DynamicAgent {
 
 	private static final Logger log = LoggerFactory.getLogger(ConfigurableDynaAgent.class);
 
 	/**
-	 * Constructor for ConfigurableDynaAgent with configurable parameters
+	 * Constructor for ConfigurableDynaAgent with configurable parameters【ConfigurableDynaAgent 可配置参数的构造函数】
 	 * @param llmService LLM service
 	 * @param planExecutionRecorder Plan execution recorder
 	 * @param manusProperties Manus properties
