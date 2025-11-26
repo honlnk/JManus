@@ -87,8 +87,8 @@ import com.alibaba.cloud.ai.manus.tool.textOperator.TextFileService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 /**
- * @author yuluo
- * @author <a href="mailto:yuluo08290126@gmail.com">yuluo</a>
+ * @author yuluo 【作者】
+ * @author <a href="mailto:yuluo08290126@gmail.com">yuluo</a> 【作者邮箱】
  */
 
 @Service
@@ -108,8 +108,7 @@ public class PlanningFactory {
 
 	private final DataSourceService dataSourceService;
 
-	// private final TableProcessingService tableProcessingService; // Currently unused -
-	// commented out for future use
+	// private final TableProcessingService tableProcessingService; // 当前未使用，为未来使用保留注释
 
 	private final static Logger log = LoggerFactory.getLogger(PlanningFactory.class);
 
@@ -171,12 +170,12 @@ public class PlanningFactory {
 		this.innerStorageService = innerStorageService;
 		this.unifiedDirectoryManager = unifiedDirectoryManager;
 		this.dataSourceService = dataSourceService;
-		// this.tableProcessingService = tableProcessingService; // Currently unused
+		// this.tableProcessingService = tableProcessingService; // 当前未使用
 	}
 
 	/**
-	 * Create a PlanFinalizer instance
-	 * @return configured PlanFinalizer instance
+	 * Create a PlanFinalizer instance【创建PlanFinalizer实例】
+	 * @return configured PlanFinalizer instance【已配置的PlanFinalizer实例】
 	 */
 	public PlanFinalizer createPlanFinalizer() {
 		return new PlanFinalizer(llmService, recorder, manusProperties, streamingResponseHandler,
@@ -185,9 +184,9 @@ public class PlanningFactory {
 
 	public static class ToolCallBackContext {
 
-		private final ToolCallback toolCallback;
+		private final ToolCallback toolCallback;    // Spring AI 标准接口
 
-		private final ToolCallBiFunctionDef<?> functionInstance;
+		private final ToolCallBiFunctionDef<?> functionInstance;   // JManus 自定义接口
 
 		public ToolCallBackContext(ToolCallback toolCallback, ToolCallBiFunctionDef<?> functionInstance) {
 			this.toolCallback = toolCallback;
@@ -211,15 +210,15 @@ public class PlanningFactory {
 		Map<String, ToolCallBackContext> toolCallbackMap = new HashMap<>();
 		List<ToolCallBiFunctionDef<?>> toolDefinitions = new ArrayList<>();
 		if (chromeDriverService == null) {
-			log.error("ChromeDriverService is null, skipping BrowserUseTool registration");
+			log.error("ChromeDriverService为空，跳过BrowserUseTool注册");
 			return toolCallbackMap;
 		}
 		if (innerStorageService == null) {
-			log.error("SmartContentSavingService is null, skipping BrowserUseTool registration");
+			log.error("SmartContentSavingService为空，跳过BrowserUseTool注册");
 			return toolCallbackMap;
 		}
 		if (agentInit) {
-			// Add all tool definitions
+			// 添加所有工具定义
 			toolDefinitions.add(BrowserUseTool.getInstance(chromeDriverService, innerStorageService, objectMapper));
 			toolDefinitions.add(DatabaseReadTool.getInstance(dataSourceService, objectMapper));
 			toolDefinitions.add(DatabaseWriteTool.getInstance(dataSourceService, objectMapper));
@@ -262,11 +261,11 @@ public class PlanningFactory {
 			String serviceGroup = toolCallback.getServiceGroup();
 			ToolCallback[] tCallbacks = toolCallback.getAsyncMcpToolCallbackProvider().getToolCallbacks();
 			for (ToolCallback tCallback : tCallbacks) {
-				// The serviceGroup is the name of the tool
+				// serviceGroup 是工具名称
 				toolDefinitions.add(new McpTool(tCallback, serviceGroup, planId, innerStorageService, objectMapper));
 			}
 		}
-		// Create FunctionToolCallback for each tool
+		// C为每个工具创建 FunctionToolCallback【功能工具回调】
 		for (ToolCallBiFunctionDef<?> toolDefinition : toolDefinitions) {
 
 			try {
@@ -289,7 +288,7 @@ public class PlanningFactory {
 			}
 		}
 
-		// Add subplan tool registration
+		// 添加子计划工具注册
 		if (subplanToolService != null) {
 			try {
 				Map<String, PlanningFactory.ToolCallBackContext> subplanToolCallbacks = subplanToolService
@@ -308,26 +307,27 @@ public class PlanningFactory {
 	@SuppressWarnings("deprecation")
 	@Bean
 	public RestClient.Builder createRestClient() {
-		// Create RequestConfig and set the timeout (10 minutes for all timeouts)
+		// 创建RequestConfig并设置超时时间（所有超时均为10分钟）。
 		RequestConfig requestConfig = RequestConfig.custom()
-			.setConnectTimeout(Timeout.of(10, TimeUnit.MINUTES)) // Set the connection
-																	// timeout
+			.setConnectTimeout(Timeout.of(10, TimeUnit.MINUTES)) // 设置连接
+																	// 超时
 			.setResponseTimeout(Timeout.of(10, TimeUnit.MINUTES))
 			.setConnectionRequestTimeout(Timeout.of(10, TimeUnit.MINUTES))
 			.build();
 
-		// Create CloseableHttpClient and apply the configuration
+		// 创建可关闭的HttpClient并应用配置
 		HttpClient httpClient = HttpClients.custom().setDefaultRequestConfig(requestConfig).build();
 
-		// Use HttpComponentsClientHttpRequestFactory to wrap HttpClient
+		// 使用HttpComponentsClientHttpRequestFactory来封装HttpClient。
 		HttpComponentsClientHttpRequestFactory requestFactory = new HttpComponentsClientHttpRequestFactory(httpClient);
 
-		// Create RestClient and set the request factory
+		// 创建RestClient并设置请求工厂
 		return RestClient.builder().requestFactory(requestFactory);
 	}
 
 	/**
 	 * Provides an empty ToolCallbackProvider implementation when MCP is disabled
+   * 【当MCP被禁用时，提供一个空的 ToolCallbackProvider 实现】
 	 */
 	@Bean
 	@ConditionalOnMissingBean

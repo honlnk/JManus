@@ -42,6 +42,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 /**
  * Plan template controller, handles API requests for the plan template page
+ * 【计划模板控制器，处理计划模板页面的API请求。】
  */
 @RestController
 @RequestMapping("/api/plan-template")
@@ -66,17 +67,17 @@ public class PlanTemplateController {
 	private IPlanParameterMappingService parameterMappingService;
 
 	/**
-	 * Save version history
-	 * @param planJson Plan JSON data
-	 * @param planId Plan template ID (already generated)
-	 * @return Save result
+	 * Save version history【保存版本历史】
+	 * @param planJson Plan JSON data【计划JSON数据】
+	 * @param planId Plan template ID (already generated)【计划模板ID（已生成）】
+	 * @return Save result【保存结果】
 	 */
 	private PlanTemplateService.VersionSaveResult saveToVersionHistory(String planJson, String planId) {
 		try {
-			// Parse JSON to extract title
+			// 解析JSON以提取标题
 			PlanInterface planData = objectMapper.readValue(planJson, PlanInterface.class);
 
-			// Use the provided planId instead of generating a new one
+			// 使用提供的planId而不是生成新的
 			String planTemplateId = planId;
 
 			String title = planData.getTitle();
@@ -88,26 +89,26 @@ public class PlanTemplateController {
 				title = "Untitled Plan";
 			}
 
-			// Check if the plan exists
+			// 检查计划是否存在
 			PlanTemplate template = planTemplateService.getPlanTemplate(planTemplateId);
 			if (template == null) {
-				// If it doesn't exist, create a new plan
+				// 如果不存在，创建新计划
 				planTemplateService.savePlanTemplate(planTemplateId, title, title, planJson, false);
 				logger.info("New plan created: {}", planTemplateId);
 				return new PlanTemplateService.VersionSaveResult(true, false, "New plan created", 0);
 			}
 			else {
-				// If it exists, update the template with new title and save a new version
+				// 如果存在，用新标题更新模板并保存新版本
 				boolean updated = planTemplateService.updatePlanTemplate(planTemplateId, title, planJson, false);
 				if (updated) {
 					logger.info("Updated plan template {} with new title and saved new version", planTemplateId);
-					// Get the latest version index after update
+					// 更新后获取最新版本索引
 					Integer maxVersionIndex = planTemplateService.getPlanVersions(planTemplateId).size() - 1;
 					return new PlanTemplateService.VersionSaveResult(true, false,
 							"Plan template updated and new version saved", maxVersionIndex);
 				}
 				else {
-					// Fallback to just saving version if update failed
+					// 如果更新失败，回退到仅保存版本
 					PlanTemplateService.VersionSaveResult result = planTemplateService
 						.saveToVersionHistory(planTemplateId, planJson);
 					if (result.isSaved()) {
@@ -127,9 +128,9 @@ public class PlanTemplateController {
 	}
 
 	/**
-	 * Save plan
-	 * @param request Request containing plan ID and JSON
-	 * @return Save result
+	 * Save plan【保存计划】
+	 * @param request Request containing plan ID and JSON【包含计划ID和JSON的请求】
+	 * @return Save result【保存结果】
 	 */
 	@PostMapping("/save")
 	@Transactional
@@ -141,24 +142,24 @@ public class PlanTemplateController {
 		}
 
 		try {
-			// Parse JSON to get planId
+			// 解析JSON以获取planId
 			PlanInterface planData = objectMapper.readValue(planJson, PlanInterface.class);
 			String planId = planData.getPlanTemplateId();
 			if (planId == null) {
 				planId = planData.getRootPlanId();
 			}
 
-			// Check if planId is empty or starts with "new-", then generate a new one
+			// 检查planId是否为空或以"new-"开头，然后生成新的
 			if (planId == null || planId.trim().isEmpty() || planId.startsWith("new-")) {
 				String newPlanId = planIdDispatcher.generatePlanTemplateId();
 				logger.info("Original planId '{}' is empty or starts with 'new-', generated new planId: {}", planId,
 						newPlanId);
 
-				// Update the plan object with new ID
+				// 用新ID更新计划对象
 				planData.setCurrentPlanId(newPlanId);
 				planData.setRootPlanId(newPlanId);
 
-				// Re-serialize the updated plan object to JSON
+				// 重新序列化更新的计划对象为JSON
 				planJson = objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(planData);
 				planId = newPlanId;
 			}
@@ -167,14 +168,14 @@ public class PlanTemplateController {
 				return ResponseEntity.badRequest().body(Map.of("error", "Plan ID cannot be found in JSON"));
 			}
 
-			// Save to version history
+			// 保存到版本历史
 			PlanTemplateService.VersionSaveResult saveResult = saveToVersionHistory(planJson, planId);
 
-			// Calculate version count
+			// 计算版本数量
 			List<String> versions = planTemplateService.getPlanVersions(planId);
 			int versionCount = versions.size();
 
-			// Build response
+			// 构建响应
 			Map<String, Object> response = new HashMap<>();
 			response.put("status", "success");
 			response.put("planId", planId);
@@ -193,9 +194,9 @@ public class PlanTemplateController {
 	}
 
 	/**
-	 * Get the version history of the plan
-	 * @param request Request containing plan ID
-	 * @return Version history list
+	 * Get the version history of the plan【获取计划的版本历史】
+	 * @param request Request containing plan ID【包含计划ID的请求】
+	 * @return Version history list【版本历史列表】
 	 */
 	@PostMapping("/versions")
 	public ResponseEntity<Map<String, Object>> getPlanVersions(@RequestBody Map<String, String> request) {
@@ -216,9 +217,9 @@ public class PlanTemplateController {
 	}
 
 	/**
-	 * Get a specific version of the plan
-	 * @param request Request containing plan ID and version index
-	 * @return Specific version of the plan
+	 * Get a specific version of the plan【获取计划的特定版本】
+	 * @param request Request containing plan ID and version index【包含计划ID和版本索引的请求】
+	 * @return Specific version of the plan【计划的特定版本】
 	 */
 	@PostMapping("/get-version")
 	public ResponseEntity<Map<String, Object>> getVersionPlan(@RequestBody Map<String, String> request) {
@@ -266,18 +267,17 @@ public class PlanTemplateController {
 	}
 
 	/**
-	 * Get all plan templates
-	 * @return All plan templates
+	 * Get all plan templates【获取所有计划模板】
+	 * @return All plan templates【所有计划模板】
 	 */
 	@GetMapping("/list")
 	public ResponseEntity<Map<String, Object>> getAllPlanTemplates() {
 		try {
-			// Use PlanTemplateService to get all plan templates
-			// Since there is no direct method to get all templates, we use the findAll
-			// method of PlanTemplateRepository
+			// 使用PlanTemplateService获取所有计划模板
+			// 由于没有直接的方法来获取所有模板，我们使用PlanTemplateRepository的findAll方法
 			List<PlanTemplate> templates = planTemplateService.getAllPlanTemplates();
 
-			// Build response data
+			// 构建响应数据
 			List<Map<String, Object>> templateList = new ArrayList<>();
 			for (PlanTemplate template : templates) {
 				Map<String, Object> templateData = new HashMap<>();
@@ -306,9 +306,9 @@ public class PlanTemplateController {
 	}
 
 	/**
-	 * Delete plan template
-	 * @param request Request containing plan ID
-	 * @return Delete result
+	 * Delete plan template【删除计划模板】
+	 * @param request Request containing plan ID【包含计划ID的请求】
+	 * @return Delete result【删除结果】
 	 */
 	@PostMapping("/delete")
 	public ResponseEntity<Map<String, Object>> deletePlanTemplate(@RequestBody Map<String, String> request) {
@@ -319,13 +319,13 @@ public class PlanTemplateController {
 		}
 
 		try {
-			// Check if the plan template exists
+			// 检查计划模板是否存在
 			PlanTemplate template = planTemplateService.getPlanTemplate(planId);
 			if (template == null) {
 				return ResponseEntity.notFound().build();
 			}
 
-			// Delete the plan template and all versions
+			// 删除计划模板和所有版本
 			boolean deleted = planTemplateService.deletePlanTemplate(planId);
 
 			if (deleted) {
@@ -346,9 +346,9 @@ public class PlanTemplateController {
 	}
 
 	/**
-	 * Get parameter requirements for a plan template
-	 * @param planTemplateId The plan template ID
-	 * @return List of required parameters
+	 * Get parameter requirements for a plan template【获取计划模板的参数要求】
+	 * @param planTemplateId The plan template ID【计划模板ID】
+	 * @return List of required parameters【所需参数列表】
 	 */
 	@GetMapping("/{planTemplateId}/parameters")
 	public ResponseEntity<Map<String, Object>> getParameterRequirements(@PathVariable String planTemplateId) {

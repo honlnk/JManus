@@ -1352,7 +1352,7 @@ public class DynamicAgent extends ReActAgent {
 			return toolCallBackContext.get(toolKey);
 		}
 		else {
-			log.warn("Tool callback for {} not found in the map.", toolKey);
+			log.warn("在映射中未找到 {} 对应的工具回调。", toolKey);
 			return null;
 		}
 	}
