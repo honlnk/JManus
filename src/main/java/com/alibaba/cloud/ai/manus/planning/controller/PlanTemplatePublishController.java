@@ -29,6 +29,7 @@ import java.util.Map;
 
 /**
  * Controller for publishing plan templates as inner toolcalls
+ * 【将发布计划模板作为内部工具调用的控制器】
  */
 @RestController
 @RequestMapping("/api/plan-template-publish")
@@ -45,6 +46,7 @@ public class PlanTemplatePublishController {
 
 	/**
 	 * Initialize and register plan templates as inner toolcalls
+   * 【初始化并注册计划模板作为内部工具调用。】
 	 * @param request Request containing language (plan names are automatically
 	 * discovered)
 	 * @return Initialization and registration result
