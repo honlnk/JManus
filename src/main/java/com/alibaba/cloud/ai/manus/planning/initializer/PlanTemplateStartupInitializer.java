@@ -40,6 +40,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 /**
  * Startup initializer for plan templates from startup-plans directory Also registers
  * default plan templates as coordinator tools (internal toolcalls)
+ * 【启动计划模板初始化器，从startup-plans目录加载初始模板，同时将默认计划模板注册为协调器工具（内部工具调用）。】
  */
 @Component
 public class PlanTemplateStartupInitializer {
@@ -61,92 +62,95 @@ public class PlanTemplateStartupInitializer {
 
 	/**
 	 * Initialize startup plan templates when application is ready
+   * 【应用程序就绪时初始化启动计划模板】
 	 */
 	@EventListener(ApplicationReadyEvent.class)
 	public void initializeStartupPlanTemplates() {
-		log.info("Starting startup plan templates initialization for namespace: {}", namespace);
+		log.info("开始为命名空间初始化启动计划模板: {}", namespace);
 
 		try {
-			// Register all plan templates with toolConfig as coordinator tools
-			// This will also create PlanTemplate if it doesn't exist
+			// 将所有工具配置为协调工具的规划模板进行注册。
+			// 如果不存在，这也将创建PlanTemplate。
 			registerPlanTemplatesAsTools();
 
 		}
 		catch (Exception e) {
-			log.error("Failed to initialize startup plan templates for namespace: {}", namespace, e);
+			log.error("未能初始化命名空间的启动计划模板: {}", namespace, e);
 		}
 	}
 
 	/**
 	 * Register all plan templates with toolConfig as coordinator tools Scans all JSON
 	 * files in startup-plans directory and registers those with toolConfig
+   * 【将所有工具配置为协调器工具的规划模板进行注册，扫描启动规划目录中的所有JSON文件，并注册那些包含工具配置的文件。】
 	 */
 	private void registerPlanTemplatesAsTools() {
-		log.info("Starting registration of plan templates as coordinator tools");
+		log.info("开始将计划模板注册为协调员工具");
 
 		int successCount = 0;
 		int errorCount = 0;
 
-		// Scan for all JSON files in startup-plans directory
+		// 扫描启动计划目录中的所有JSON文件
 		List<String> configFilePaths = scanPlanTemplateConfigFiles();
 
 		if (configFilePaths.isEmpty()) {
-			log.info("No plan template configuration files found to register as coordinator tools");
+			log.info("未找到计划模板配置文件以注册为协调器工具。");
 			return;
 		}
 
-		log.info("Found {} plan template configuration files to process", configFilePaths.size());
+		log.info("找到 {} 个计划模板配置文件需要处理", configFilePaths.size());
 
-		// Process each configuration file
+		// 处理每个配置文件
 		for (String configPath : configFilePaths) {
 			try {
-				// Load and parse PlanTemplateConfigVO from JSON file
+				// 从JSON文件加载并解析PlanTemplateConfigVO
 				PlanTemplateConfigVO configVO = loadPlanTemplateConfigFromFile(configPath);
 				if (configVO == null) {
-					log.warn("Failed to load PlanTemplateConfigVO from file: {}. Skipping.", configPath);
+					log.warn("从文件加载 PlanTemplateConfigVO 失败: {}。跳过。", configPath);
 					errorCount++;
 					continue;
 				}
 
-				// Only register if toolConfig is present
+				// 仅当存在toolConfig时才注册
 				if (configVO.getToolConfig() == null) {
-					log.debug("Plan template {} does not have toolConfig, skipping coordinator tool registration",
+					log.debug("计划模板 {} 没有 toolConfig，跳过协调器工具注册",
 							configVO.getPlanTemplateId());
 					continue;
 				}
 
-				// Validate planTemplateId
+				// 验证planTemplateId
 				String planTemplateId = configVO.getPlanTemplateId();
 				if (planTemplateId == null || planTemplateId.trim().isEmpty()) {
-					log.warn("Plan template in file {} does not have planTemplateId. Skipping.", configPath);
+					log.warn("文件 {} 中的计划模板没有 planTemplateId。跳过。", configPath);
 					errorCount++;
 					continue;
 				}
 
-				// Use the service method to create or update coordinator tool
+				// 使用服务方法创建或更新协调器工具
 				coordinatorToolService.createOrUpdateCoordinatorToolFromPlanTemplateConfig(configVO);
-				log.info("Successfully registered coordinator tool for plan template: {} from file: {}", planTemplateId,
+				log.info("成功为计划模板注册协调器工具: {} 来自文件: {}", planTemplateId,
 						configPath);
 				successCount++;
 
 			}
 			catch (CoordinatorToolException e) {
-				log.error("Failed to register coordinator tool from file {}: {}", configPath, e.getMessage(), e);
+				log.error("从文件 {} 注册协调器工具失败: {}", configPath, e.getMessage(), e);
 				errorCount++;
 			}
 			catch (Exception e) {
-				log.error("Unexpected error while registering coordinator tool from file {}", configPath, e);
+				log.error("从文件 {} 注册协调器工具时发生意外错误", configPath, e);
 				errorCount++;
 			}
 		}
 
-		log.info("Completed registration of plan templates as coordinator tools. Success: {}, Errors: {}", successCount,
+		log.info("完成计划模板注册为协调器工具。成功: {}, 错误: {}", successCount,
 				errorCount);
 	}
 
 	/**
 	 * Scan for all plan template configuration files in startup-plans directory
-	 * @return List of configuration file paths
+	 * 【扫描启动目录中的所有计划模板配置文件】
+	 * @return List of configuration file paths 【配置文件路径列表】
 	 */
 	private List<String> scanPlanTemplateConfigFiles() {
 		List<String> configFilePaths = new ArrayList<>();
@@ -154,7 +158,7 @@ public class PlanTemplateStartupInitializer {
 		try {
 			PathMatchingResourcePatternResolver resolver = new PathMatchingResourcePatternResolver();
 
-			// Scan for JSON files in the default language directory only
+			// 仅扫描默认语言目录中的JSON文件
 			String pattern = CONFIG_BASE_PATH + DEFAULT_LANGUAGE + "/*.json";
 			try {
 				Resource[] resources = resolver.getResources("classpath:" + pattern);
@@ -162,35 +166,36 @@ public class PlanTemplateStartupInitializer {
 					if (resource.exists() && resource.isReadable()) {
 						String path = CONFIG_BASE_PATH + DEFAULT_LANGUAGE + "/" + resource.getFilename();
 						configFilePaths.add(path);
-						log.debug("Found plan template configuration file: {}", path);
+						log.debug("找到计划模板配置文件: {}", path);
 					}
 				}
 			}
 			catch (Exception ex) {
-				log.debug("No resources found for pattern: {}", pattern);
+				log.debug("未找到模式对应的资源: {}", pattern);
 			}
 
-			log.info("Scanned {} plan template configuration files", configFilePaths.size());
+			log.info("扫描了 {} 个计划模板配置文件", configFilePaths.size());
 			return configFilePaths;
 
 		}
 		catch (Exception e) {
-			log.error("Failed to scan plan template configuration directory", e);
+			log.error("扫描计划模板配置目录失败", e);
 			return configFilePaths;
 		}
 	}
 
 	/**
 	 * Load PlanTemplateConfigVO from JSON configuration file
-	 * @param configPath Configuration file path
-	 * @return PlanTemplateConfigVO if loaded successfully, null otherwise
+	 * 【从JSON配置文件加载PlanTemplateConfigVO】
+	 * @param configPath Configuration file path 【配置文件路径】
+	 * @return PlanTemplateConfigVO if loaded successfully, null otherwise 【如果加载成功返回PlanTemplateConfigVO，否则返回null】
 	 */
 	private PlanTemplateConfigVO loadPlanTemplateConfigFromFile(String configPath) {
 		try {
 			org.springframework.core.io.ClassPathResource resource = new org.springframework.core.io.ClassPathResource(
 					configPath);
 			if (!resource.exists()) {
-				log.warn("Plan template configuration file does not exist: {}", configPath);
+				log.warn("计划模板配置文件不存在: {}", configPath);
 				return null;
 			}
 
@@ -205,22 +210,22 @@ public class PlanTemplateStartupInitializer {
 
 			String jsonContent = content.toString().trim();
 			if (jsonContent.isEmpty()) {
-				log.warn("Plan template configuration file is empty: {}", configPath);
+				log.warn("计划模板配置文件为空: {}", configPath);
 				return null;
 			}
 
-			// Parse JSON to PlanTemplateConfigVO
+			// 将JSON解析为PlanTemplateConfigVO
 			PlanTemplateConfigVO configVO = objectMapper.readValue(jsonContent, PlanTemplateConfigVO.class);
-			log.debug("Successfully loaded PlanTemplateConfigVO from file: {}", configPath);
+			log.debug("成功从文件加载 PlanTemplateConfigVO: {}", configPath);
 			return configVO;
 
 		}
 		catch (IOException e) {
-			log.error("Failed to load plan template configuration file: {}", configPath, e);
+			log.error("加载计划模板配置文件失败: {}", configPath, e);
 			return null;
 		}
 		catch (Exception e) {
-			log.error("Failed to parse PlanTemplateConfigVO from file: {}", configPath, e);
+			log.error("从文件解析 PlanTemplateConfigVO 失败: {}", configPath, e);
 			return null;
 		}
 	}
