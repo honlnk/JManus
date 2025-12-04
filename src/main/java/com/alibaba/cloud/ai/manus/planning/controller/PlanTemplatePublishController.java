@@ -94,6 +94,7 @@ public class PlanTemplatePublishController {
 
 	/**
 	 * Register specific plan templates as inner toolcalls
+   * 【将特定计划模板注册为内部工具调用】
 	 * @param request Request containing plan names
 	 * @return Registration result
 	 */
@@ -123,6 +124,7 @@ public class PlanTemplatePublishController {
 
 	/**
 	 * Unregister plan templates from inner toolcalls
+   * 【从内部工具调用中注销计划模板】
 	 * @param request Request containing plan names
 	 * @return Unregistration result
 	 */
@@ -152,6 +154,7 @@ public class PlanTemplatePublishController {
 
 	/**
 	 * Get status of plan template registrations
+   * 【获取计划模板注册状态】
 	 * @return Registration status
 	 */
 	@GetMapping("/status")
@@ -169,6 +172,7 @@ public class PlanTemplatePublishController {
 
 	/**
 	 * Get all registered plan templates
+   * 【获取所有已注册的计划模板】
 	 * @return List of registered plan templates
 	 */
 	@GetMapping("/registered")

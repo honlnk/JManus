@@ -67,7 +67,8 @@ public class PlanTemplateController {
 	private IPlanParameterMappingService parameterMappingService;
 
 	/**
-	 * Save version history【保存版本历史】
+	 * Save version history
+   * 【保存版本历史】
 	 * @param planJson Plan JSON data【计划JSON数据】
 	 * @param planId Plan template ID (already generated)【计划模板ID（已生成）】
 	 * @return Save result【保存结果】
@@ -128,7 +129,8 @@ public class PlanTemplateController {
 	}
 
 	/**
-	 * Save plan【保存计划】
+	 * Save plan
+   * 【保存计划】
 	 * @param request Request containing plan ID and JSON【包含计划ID和JSON的请求】
 	 * @return Save result【保存结果】
 	 */
@@ -194,7 +196,8 @@ public class PlanTemplateController {
 	}
 
 	/**
-	 * Get the version history of the plan【获取计划的版本历史】
+	 * Get the version history of the plan
+   * 【获取计划的版本历史】
 	 * @param request Request containing plan ID【包含计划ID的请求】
 	 * @return Version history list【版本历史列表】
 	 */
@@ -217,7 +220,8 @@ public class PlanTemplateController {
 	}
 
 	/**
-	 * Get a specific version of the plan【获取计划的特定版本】
+	 * Get a specific version of the plan
+   * 【获取计划的特定版本】
 	 * @param request Request containing plan ID and version index【包含计划ID和版本索引的请求】
 	 * @return Specific version of the plan【计划的特定版本】
 	 */
@@ -267,7 +271,8 @@ public class PlanTemplateController {
 	}
 
 	/**
-	 * Get all plan templates【获取所有计划模板】
+	 * Get all plan templates
+   * 【获取所有计划模板】
 	 * @return All plan templates【所有计划模板】
 	 */
 	@GetMapping("/list")
@@ -306,7 +311,8 @@ public class PlanTemplateController {
 	}
 
 	/**
-	 * Delete plan template【删除计划模板】
+	 * Delete plan template
+   * 【删除计划模板】
 	 * @param request Request containing plan ID【包含计划ID的请求】
 	 * @return Delete result【删除结果】
 	 */
@@ -346,7 +352,8 @@ public class PlanTemplateController {
 	}
 
 	/**
-	 * Get parameter requirements for a plan template【获取计划模板的参数要求】
+	 * Get parameter requirements for a plan template
+   * 【获取计划模板的参数要求】
 	 * @param planTemplateId The plan template ID【计划模板ID】
 	 * @return List of required parameters【所需参数列表】
 	 */

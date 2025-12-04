@@ -28,6 +28,12 @@ import org.springframework.stereotype.Component;
 import java.awt.*;
 import java.net.URI;
 
+/**
+ * Listener for application startup, responsible for opening the browser to access the
+ * application.
+ * 【应用程序启动监听器，负责打开浏览器访问应用。】
+ */
+
 @Component
 public class AppStartupListener implements ApplicationListener<ApplicationReadyEvent> {
 
