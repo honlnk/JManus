@@ -31,7 +31,7 @@ public class ManusProperties implements IManusProperties {
 	@Autowired
 	private IConfigService configService;
 
-	// Browser Settings
+	// Browser Settings【浏览器设置】
 	// Begin-------------------------------------------------------------------------------------------
 
 	@ConfigProperty(group = "manus", subGroup = "browser", key = "headless", path = "manus.browser.headless",
@@ -92,10 +92,10 @@ public class ManusProperties implements IManusProperties {
 		this.debugDetail = debugDetail;
 	}
 
-	// Browser Settings
+	// Browser Settings【浏览器设置】
 	// End---------------------------------------------------------------------------------------------
 
-	// Interaction Settings
+	// Interaction Settings【交互设置】
 	// Begin---------------------------------------------------------------------------------------
 	@ConfigProperty(group = "manus", subGroup = "interaction", key = "openBrowser", path = "manus.openBrowserAuto",
 			description = "manus.interaction.openBrowser.description", defaultValue = "true",
@@ -117,10 +117,10 @@ public class ManusProperties implements IManusProperties {
 		this.openBrowserAuto = openBrowserAuto;
 	}
 
-	// Interaction Settings
+	// Interaction Settings【交互设置】
 	// End-----------------------------------------------------------------------------------------
 
-	// Agent Settings
+	// Agent Settings【代理设置】
 	// Begin---------------------------------------------------------------------------------------------
 
 	@ConfigProperty(group = "manus", subGroup = "agent", key = "maxSteps", path = "manus.maxSteps",
@@ -253,10 +253,10 @@ public class ManusProperties implements IManusProperties {
 		this.llmReadTimeout = llmReadTimeout;
 	}
 
-	// Agent Settings
+	// Agent Settings【代理设置】
 	// End-----------------------------------------------------------------------------------------------
 
-	// Normal Settings
+	// Normal Settings【常规设置】
 	// Begin--------------------------------------------------------------------------------------------
 
 	@ConfigProperty(group = "manus", subGroup = "general", key = "baseDir", path = "manus.baseDir",
@@ -276,7 +276,7 @@ public class ManusProperties implements IManusProperties {
 		this.baseDir = baseDir;
 	}
 
-	// Normal Settings
+	// Normal Settings【常规设置】
 	// End----------------------------------------------------------------------------------------------
 
 	/*
@@ -357,7 +357,7 @@ public class ManusProperties implements IManusProperties {
 		this.infiniteContextTaskContextSize = infiniteContextTaskContextSize;
 	}
 
-	// File System Security SubGroup
+	// File System Security SubGroup【文件系统安全子组】
 	@ConfigProperty(group = "manus", subGroup = "filesystem", key = "allowExternalAccess",
 			path = "manus.filesystem.allowExternalAccess",
 			description = "Whether to allow file operations outside the working directory", defaultValue = "false",
@@ -382,7 +382,7 @@ public class ManusProperties implements IManusProperties {
 		this.allowExternalAccess = allowExternalAccess;
 	}
 
-	// MCP Service Loader Settings
+	// MCP Service Loader Settings【MCP服务加载器设置】
 	// Begin--------------------------------------------------------------------------------------------
 
 	@ConfigProperty(group = "manus", subGroup = "mcpServiceLoader", key = "connectionTimeoutSeconds",
@@ -454,10 +454,10 @@ public class ManusProperties implements IManusProperties {
 		this.mcpMaxConcurrentConnections = mcpMaxConcurrentConnections;
 	}
 
-	// MCP Service Loader Settings
+	// MCP Service Loader Settings【MCP服务加载器设置】
 	// End----------------------------------------------------------------------------------------------
 
-	// Image Recognition Settings
+	// Image Recognition Settings【图像识别设置】
 	// Begin--------------------------------------------------------------------------------------------
 
 	@ConfigProperty(group = "manus", subGroup = "imageRecognition", key = "poolSize",
@@ -571,7 +571,7 @@ public class ManusProperties implements IManusProperties {
 		this.imageRecognitionMaxRetryAttempts = imageRecognitionMaxRetryAttempts;
 	}
 
-	// Image Recognition Settings
+	// Image Recognition Settings【图像识别设置】
 	// End----------------------------------------------------------------------------------------------
 
 }

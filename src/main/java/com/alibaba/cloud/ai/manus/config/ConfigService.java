@@ -65,16 +65,16 @@ public class ConfigService implements IConfigService, ApplicationListener<Contex
 	}
 
 	private void init() {
-		// Only get beans with @ConfigurationProperties annotation
+		// Only get beans with @ConfigurationProperties annotation【扫描所有带@ConfigurationProperties注解的Bean】
 		Map<String, Object> configBeans = applicationContext.getBeansWithAnnotation(ConfigurationProperties.class);
-		log.info("Found {} configuration beans", configBeans.size());
+		log.info("发现 {} 个配置Bean", configBeans.size());
 
-		// Initialize each configuration bean
+		// Initialize each configuration bean【初始化每个配置bean】
 		configBeans.values().forEach(this::initializeConfig);
 	}
 
 	private void initializeConfig(Object bean) {
-		// Collect all valid config paths from the bean
+		// Collect all valid config paths from the bean【收集bean中的所有有效配置路径】（提取字段上的@ConfigProperty注解信息）
 		Set<String> validConfigPaths = Arrays.stream(bean.getClass().getDeclaredFields())
 			.filter(field -> field.isAnnotationPresent(ConfigProperty.class))
 			.map(field -> field.getAnnotation(ConfigProperty.class).path())

@@ -42,7 +42,7 @@ public class AppStartupListener implements ApplicationListener<ApplicationReadyE
 	public static final String INIT_WEB_PATH = "/ui/index.html";
 
 	@Value("${server.port:18080}")
-	// Using Spring's original here to keep consistent with configuration file.
+	// 此处使用Spring原版以保持与配置文件的一致性。
 	private String serverPort;
 
 	@Autowired
@@ -52,7 +52,7 @@ public class AppStartupListener implements ApplicationListener<ApplicationReadyE
 	public void onApplicationEvent(ApplicationReadyEvent event) {
 		// Only execute when configuration allows auto-opening browser
 		if (!manusProperties.getOpenBrowserAuto()) {
-			logger.info("Auto-open browser feature is disabled");
+			logger.info("自动打开浏览器功能已禁用");
 			return;
 		}
 

@@ -43,6 +43,7 @@ public class ConfigController {
 	@Autowired
 	private DynamicModelRepository dynamicModelRepository;
 
+  //【REST API暴露配置】
 	@GetMapping("/group/{groupName}")
 	public ResponseEntity<List<ConfigEntity>> getConfigsByGroup(@PathVariable("groupName") String groupName) {
 		return ResponseEntity.ok(configService.getConfigsByGroup(groupName));
